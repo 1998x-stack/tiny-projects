@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Projects — 从零构建的8个玩具项目</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #58a6ff; --accent2: #3fb950; --orange: #d29922; --purple: #d2a8ff; --red: #f85149; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height:1.6; }
+  .container { max-width:1000px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 3rem; border-bottom:1px solid var(--border); margin-bottom:2rem; }
+  h1 { font-size:2.8rem; color:#fff; margin-bottom:0.5rem; }
+  h1 .accent { color:var(--accent2); }
+  .subtitle { color:#8b949e; font-size:1.2rem; margin:1rem 0; }
+  .quote { font-style:italic; color:#484f58; font-size:0.95rem; }
+  .project-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:1.5rem; }
+  .project-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; transition: border-color 0.2s; }
+  .project-card:hover { border-color:var(--accent); }
+  .card-header { padding:1.5rem 1.5rem 0.75rem; }
+  .card-number { font-size:0.8rem; color:#8b949e; text-transform:uppercase; letter-spacing:1px; }
+  .card-title { font-size:1.3rem; color:#fff; margin:0.25rem 0; }
+  .card-title a { color:#fff; text-decoration:none; }
+  .card-title a:hover { color:var(--accent); }
+  .card-desc { color:#8b949e; font-size:0.9rem; margin-bottom:0.75rem; }
+  .card-tags { display:flex; gap:0.4rem; flex-wrap:wrap; padding:0 1.5rem 0.75rem; }
+  .tag { padding:0.2rem 0.6rem; border-radius:12px; font-size:0.75rem; background:var(--bg); border:1px solid var(--border); }
+  .card-footer { padding:0.75rem 1.5rem 1.5rem; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .difficulty { font-size:0.8rem; }
+  .difficulty span { color:var(--accent2); }
+  .links a { color:var(--accent); text-decoration:none; font-size:0.85rem; margin-left:0.75rem; }
+  .links a:hover { text-decoration:underline; }
+  footer { text-align:center; padding:3rem 2rem; color:#8b949e; font-size:0.85rem; border-top:1px solid var(--border); margin-top:3rem; }
+  footer a { color:var(--accent); }
+  @media (max-width: 480px) { .project-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>Tiny <span class="accent">Projects</span></h1>
+  <p class="subtitle">从零构建的8个计算机工程项目</p>
+  <p class="quote">"We choose to build these things not because they are easy, but because we want to understand how they work."</p>
+</header>
+
+<div class="project-grid">
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 1</div>
+      <h3 class="card-title"><a href="01-toy-linux-kernel/assets/">🔧 Toy Linux Kernel</a></h3>
+      <p class="card-desc">多任务、内存管理、引导加载、文件系统 — xv6 架构</p>
+    </div>
+    <div class="card-tags"><span class="tag">C</span><span class="tag">x86/RISC-V</span><span class="tag">QEMU</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐⭐⭐</span></div><div class="links"><a href="01-toy-linux-kernel/spec.md">spec</a><a href="01-toy-linux-kernel/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 2</div>
+      <h3 class="card-title"><a href="02-toy-browser-engine/assets/">◈ Toy Browser Engine</a></h3>
+      <p class="card-desc">HTML/CSS 解析、布局引擎、渲染管线 — Robinson 启发</p>
+    </div>
+    <div class="card-tags"><span class="tag">Rust</span><span class="tag">C++</span><span class="tag">HTML/CSS</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐⭐⭐</span></div><div class="links"><a href="02-toy-browser-engine/spec.md">spec</a><a href="02-toy-browser-engine/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 3</div>
+      <h3 class="card-title"><a href="03-homelab-k8s/assets/">☸ Homelab K8S Cluster</a></h3>
+      <p class="card-desc">GPU 节点 + 边缘节点 + GitOps 持久化维护</p>
+    </div>
+    <div class="card-tags"><span class="tag">k3s</span><span class="tag">ArgoCD</span><span class="tag">GPU</span><span class="tag">ARM</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐⭐</span></div><div class="links"><a href="03-homelab-k8s/spec.md">spec</a><a href="03-homelab-k8s/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 4</div>
+      <h3 class="card-title"><a href="04-ben-eater-cpu/assets/">⚡ Ben Eater 8-bit CPU</a></h3>
+      <p class="card-desc">面包板 SAP-1 8位计算机 — Ben Eater 教程</p>
+    </div>
+    <div class="card-tags"><span class="tag">74LS TTL</span><span class="tag">EEPROM</span><span class="tag">Hardware</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐⭐</span></div><div class="links"><a href="04-ben-eater-cpu/spec.md">spec</a><a href="04-ben-eater-cpu/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 5</div>
+      <h3 class="card-title"><a href="05-toy-pytorch/assets/">🔥 Toy PyTorch</a></h3>
+      <p class="card-desc">纯 Python 自动微分引擎 — 不用任何科学计算库</p>
+    </div>
+    <div class="card-tags"><span class="tag">Python</span><span class="tag">Autograd</span><span class="tag">~150 LOC</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐</span></div><div class="links"><a href="05-toy-pytorch/spec.md">spec</a><a href="05-toy-pytorch/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 6</div>
+      <h3 class="card-title"><a href="06-toy-database/assets/">🗄 Toy Database</a></h3>
+      <p class="card-desc">B+ Tree · 并发读写 · 索引 · WAL 恢复</p>
+    </div>
+    <div class="card-tags"><span class="tag">Rust/Go</span><span class="tag">B+ Tree</span><span class="tag">Concurrency</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐⭐</span></div><div class="links"><a href="06-toy-database/spec.md">spec</a><a href="06-toy-database/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 7</div>
+      <h3 class="card-title"><a href="07-3d-physics-engine/assets/">⚛ 3D Physics Engine</a></h3>
+      <p class="card-desc">刚体动力学 · GJK/EPA 碰撞 · XPBD 约束求解</p>
+    </div>
+    <div class="card-tags"><span class="tag">C++</span><span class="tag">GJK</span><span class="tag">XPBD</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐⭐</span></div><div class="links"><a href="07-3d-physics-engine/spec.md">spec</a><a href="07-3d-physics-engine/gotchas.md">gotchas</a></div></div>
+  </div>
+
+  <div class="project-card">
+    <div class="card-header">
+      <div class="card-number">Project 8</div>
+      <h3 class="card-title"><a href="08-tiny-claude-code/assets/">⟳ Tiny Claude Code</a></h3>
+      <p class="card-desc">Harness Engineer 优化的微型 AI 编程代理 — ~1,400 LOC</p>
+    </div>
+    <div class="card-tags"><span class="tag">Python</span><span class="tag">Anthropic API</span><span class="tag">Agent Loop</span></div>
+    <div class="card-footer"><div class="difficulty">难度 <span>⭐⭐⭐</span></div><div class="links"><a href="08-tiny-claude-code/spec.md">spec</a><a href="08-tiny-claude-code/gotchas.md">gotchas</a></div></div>
+  </div>
+</div>
+
+<footer>
+  <p>每个项目包含 spec.md · gotchas.md · Dockerfile · GitHub Pages</p>
+  <p style="margin-top:0.5rem">MIT License · <a href="https://github.com/1998x-stack/tiny-projects">GitHub Repo</a></p>
+</footer>
+</div>
+</body>
+</html>
