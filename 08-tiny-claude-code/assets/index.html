@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Claude Code — 微型 AI 编程代理</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #d2a8ff; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:var(--accent); }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { color:#d2a8ff; }
+  .loop-diagram { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1.5rem; text-align:center; font-family:monospace; line-height:1.6; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.85rem; }
+  th { background:#0d1117; color:var(--accent2); padding:0.5rem; text-align:left; border:1px solid var(--border); }
+  td { padding:0.5rem; border:1px solid var(--border); }
+  .refs { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; }
+  .ref-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .ref-card h3 { color:var(--accent); margin-bottom:0.25rem; }
+  .ref-card a { color:var(--accent2); text-decoration:none; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1><span>⟳</span> Tiny Claude Code</h1>
+  <p class="subtitle" style="color:#8b949e;margin-top:0.5rem">Harness Engineer 优化 — 微型的 AI 编程代理</p>
+  <div class="badges">
+    <span class="badge">Python</span><span class="badge">Anthropic API</span>
+    <span class="badge">Tool Loop</span><span class="badge">~1,400 LOC</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>核心代理循环 (永不改变)</h2>
+  <div class="loop-diagram">
+<pre>User → messages[] → LLM → response
+              ↑              │
+              │   stop_reason == "tool_use"?
+              │      /              \
+              │    YES               NO → return text
+              │     │
+              │     ▼
+              └─ execute_tools() → append results</pre>
+  </div>
+  <p style="font-size:0.9rem;color:#8b949e;margin-top:0.5rem;">这个 while 循环是整个架构的基础 — 所有功能 (工具、子代理、权限、流式输出) 都在此之上叠加，循环本身永远不变。</p>
+</section>
+
+<section class="section">
+  <h2>架构对比 — Claude Code vs CoreCoder</h2>
+  <table>
+    <tr><th>模式</th><th>Claude Code (512K行)</th><th>CoreCoder (~1,400行)</th></tr>
+    <tr><td>文件编辑</td><td>FileEditTool (复杂)</td><td>edit.py — 70行</td></tr>
+    <tr><td>并行工具执行</td><td>StreamingToolExecutor (530行)</td><td>ThreadPool — 20行</td></tr>
+    <tr><td>上下文压缩</td><td>3层压缩系统</td><td>context.py — 145行</td></tr>
+    <tr><td>子代理</td><td>AgentTool (1,397行)</td><td>tools/agent.py — 50行</td></tr>
+    <tr><td>危险命令阻断</td><td>BashTool (1,143行)</td><td>tools/bash.py — 95行</td></tr>
+    <tr><td>会话持久化</td><td>QueryEngine (1,295行)</td><td>session.py — 65行</td></tr>
+  </table>
+</section>
+
+<section class="section">
+  <h2>渐进式构建计划 (12 Sessions)</h2>
+  <table>
+    <tr><th>Session</th><th>机制</th><th>描述</th></tr>
+    <tr><td>S01</td><td>Agent Loop</td><td>最小 while 循环 + 1个工具</td></tr>
+    <tr><td>S02</td><td>Tool Dispatch</td><td>工具名 → 处理函数 映射</td></tr>
+    <tr><td>S03</td><td>TodoWrite</td><td>先规划后执行</td></tr>
+    <tr><td>S04</td><td>Subagents</td><td>隔离上下文的子代理</td></tr>
+    <tr><td>S05</td><td>Skills</td><td>动态加载 SKILL.md</td></tr>
+    <tr><td>S06</td><td>Context Compact</td><td>3层上下文压缩</td></tr>
+    <tr><td>S07</td><td>Streaming</td><td>实时 token 流式输出</td></tr>
+    <tr><td>S08+</td><td>Permissions, Sessions, MCP</td><td>生产级功能</td></tr>
+  </table>
+</section>
+
+<section class="section">
+  <h2>快速开始</h2>
+  <pre><code>docker build -t tiny-claude-code .
+docker run --rm -it -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  -v $(pwd):/workspace tiny-claude-code
+# 容器内: python core.py</code></pre>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div class="refs">
+    <div class="ref-card"><h3>claude-code-from-scratch</h3><p>23-session 逆向工程</p><a href="https://github.com/FareedKhan-dev/claude-code-from-scratch">GitHub →</a></div>
+    <div class="ref-card"><h3>CoreCoder</h3><p>~1,400行 Claude Code 蓝图</p><a href="https://github.com/he-yufeng/CoreCoder">GitHub →</a></div>
+    <div class="ref-card"><h3>learn-claude-code</h3><p>12-session 渐进式构建</p><a href="https://github.com/Humbertzhang/learn-claude-code">GitHub →</a></div>
+    <div class="ref-card"><h3>Aider</h3><p>生产级 AI 编程代理</p><a href="https://github.com/paul-gauthier/aider">GitHub →</a></div>
+  </div>
+</section>
+
+<footer><p>Tiny Claude Code &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>

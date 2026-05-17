@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ben Eater 8-bit CPU — 面包板8位计算机</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #f0883e; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:var(--accent); }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.85rem; }
+  th { background:#0d1117; color:var(--accent2); padding:0.5rem; text-align:left; border:1px solid var(--border); }
+  td { padding:0.5rem; border:1px solid var(--border); }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { color:#d2a8ff; }
+  .modules { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; }
+  .mod-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .mod-card h3 { color:var(--accent2); font-size:0.95rem; margin-bottom:0.25rem; }
+  .mod-card p { color:#8b949e; font-size:0.8rem; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>⚡ <span>8-bit Breadboard CPU</span></h1>
+  <p class="subtitle" style="color:#8b949e;margin-top:0.5rem">按照 Ben Eater 教程从零构建的 SAP-1 架构计算机</p>
+  <div class="badges">
+    <span class="badge">74LS TTL</span><span class="badge">SAP-1 架构</span>
+    <span class="badge">EEPROM 微码</span><span class="badge">~$250 USD</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>模块分解</h2>
+  <div class="modules">
+    <div class="mod-card"><h3>Clock</h3><p>555 Timer ×4, 可调速度, 单步/自动</p></div>
+    <div class="mod-card"><h3>A & B Registers</h3><p>74LS173 8位寄存器 ×2, 三态输出</p></div>
+    <div class="mod-card"><h3>ALU</h3><p>74LS283 加法器, XOR 减法, 进位标志</p></div>
+    <div class="mod-card"><h3>RAM</h3><p>74189 16字节 SRAM, DIP编程</p></div>
+    <div class="mod-card"><h3>Program Counter</h3><p>74LS161 4位计数器, 16步</p></div>
+    <div class="mod-card"><h3>Control Logic</h3><p>28C16 EEPROM ×3, 微码查找表</p></div>
+    <div class="mod-card"><h3>Output</h3><p>74LS273 + 4位数码管显示</p></div>
+    <div class="mod-card"><h3>Flags</h3><p>进位(Carry) + 零(Zero) 标志</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>指令集</h2>
+  <table>
+    <tr><th>指令</th><th>操作码</th><th>描述</th></tr>
+    <tr><td>NOP</td><td>0000</td><td>空操作</td></tr>
+    <tr><td>LDA addr</td><td>0001</td><td>从RAM加载到A寄存器</td></tr>
+    <tr><td>ADD addr</td><td>0010</td><td>A = A + RAM[addr]</td></tr>
+    <tr><td>SUB addr</td><td>0011</td><td>A = A - RAM[addr]</td></tr>
+    <tr><td>STA addr</td><td>0100</td><td>存储A到RAM</td></tr>
+    <tr><td>LDI val</td><td>0101</td><td>立即数加载</td></tr>
+    <tr><td>JMP addr</td><td>0110</td><td>无条件跳转</td></tr>
+    <tr><td>JC addr</td><td>0111</td><td>进位则跳转</td></tr>
+    <tr><td>JZ addr</td><td>1000</td><td>为零则跳转</td></tr>
+    <tr><td>OUT</td><td>1110</td><td>输出A到显示</td></tr>
+    <tr><td>HLT</td><td>1111</td><td>停机</td></tr>
+  </table>
+</section>
+
+<section class="section">
+  <h2>关键IC清单</h2>
+  <table>
+    <tr><th>IC</th><th>数量</th><th>用途</th></tr>
+    <tr><td>74LS173</td><td>8</td><td>A寄存器, B寄存器, IR, MAR</td></tr>
+    <tr><td>28C16 EEPROM</td><td>3</td><td>控制逻辑微码存储</td></tr>
+    <tr><td>NE555</td><td>4</td><td>时钟模块</td></tr>
+    <tr><td>74LS283</td><td>2</td><td>ALU 加法器</td></tr>
+    <tr><td>74189</td><td>2</td><td>16字节 RAM</td></tr>
+    <tr><td>74LS245</td><td>6</td><td>总线收发器</td></tr>
+  </table>
+</section>
+
+<section class="section">
+  <h2>参考资源</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:1rem;"><strong style="color:var(--accent2)">Ben Eater 教程</strong><p style="font-size:0.85rem;color:#8b949e">完整视频系列 + 原理图</p><a href="https://eater.net/8bit" style="color:var(--accent)">eater.net →</a></div>
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:1rem;"><strong style="color:var(--accent2)">零件清单</strong><p style="font-size:0.85rem;color:#8b949e">完整BOM + 购买链接</p><a href="https://eater.net/8bit/parts" style="color:var(--accent)">查看 →</a></div>
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:1rem;"><strong style="color:var(--accent2)">jcpu</strong><p style="font-size:0.85rem;color:#8b949e">开源参考 + 汇编器</p><a href="https://github.com/jamesbates/jcpu" style="color:var(--accent)">GitHub →</a></div>
+  </div>
+</section>
+
+<footer><p>Ben Eater 8-bit CPU &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>

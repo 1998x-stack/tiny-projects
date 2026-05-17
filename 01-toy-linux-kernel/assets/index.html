@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toy Linux Kernel — 从零构建的玩具操作系统内核</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #58a6ff; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; margin-bottom:1rem; }
+  h1 span { color:var(--accent2); }
+  .subtitle { color:#8b949e; font-size:1.1rem; }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .badge.c { background:#55555522; border-color:#55555555; color:#b0b0b0; }
+  .badge.asm { background:#6e40c922; border-color:#6e40c955; color:#d2a8ff; }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; font-size:1.3rem; }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { font-family: 'SF Mono', 'Fira Code', monospace; color:#d2a8ff; }
+  .arch { text-align:center; margin:1.5rem 0; }
+  .arch pre { display:inline-block; text-align:left; color:#8b949e; }
+  .refs { display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem; }
+  .ref-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .ref-card h3 { color:var(--accent); margin-bottom:0.5rem; }
+  .ref-card a { color:var(--accent2); text-decoration:none; }
+  .quick-start ol { padding-left:1.5rem; }
+  .quick-start li { margin:0.5rem 0; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1><span>&#9432;</span> Toy Linux Kernel</h1>
+  <p class="subtitle">从零构建的多任务操作系统内核 — "麻雀虽小，五脏俱全"</p>
+  <div class="badges">
+    <span class="badge c">C</span>
+    <span class="badge asm">x86/RISC-V Assembly</span>
+    <span class="badge">QEMU</span>
+    <span class="badge">GCC Cross-Compiler</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>架构总览</h2>
+  <div class="arch">
+<pre>
+┌─────────────────────────────────────────────┐
+│                  User Space                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │   init   │  │   sh     │  │  user    │  │
+│  └──────────┘  └──────────┘  └──────────┘  │
+├─────────────────────────────────────────────┤
+│                  Kernel Space                │
+│  ┌─────────┐ ┌─────────┐ ┌─────────────┐   │
+│  │ Process │ │ Memory  │ │ File System │   │
+│  │ Manager │ │ Manager │ │  (bio/fs)   │   │
+│  ├─────────┤ ├─────────┤ ├─────────────┤   │
+│  │ Sched.  │ │ kalloc  │ │  inodes     │   │
+│  │ fork()  │ │ vm/pg   │ │  dirs       │   │
+│  │ exec()  │ │ tables  │ │  buffers    │   │
+│  ├─────────┤ └─────────┘ └─────────────┘   │
+│  │Traps/Intrrupts │  Drivers (disk,uart)    │
+│  └──────────────────────────────────────────┘│
+└─────────────────────────────────────────────┘
+        ▲ Bootloader: 16-bit real → 32-bit protected
+</pre>
+  </div>
+</section>
+
+<section class="section">
+  <h2>功能特性</h2>
+  <ul>
+    <li>&#10003; <strong>引导加载</strong> — BIOS → boot sector → 保护模式 → 内核入口</li>
+    <li>&#10003; <strong>多任务调度</strong> — 进程表、上下文切换、轮转调度器</li>
+    <li>&#10003; <strong>内存管理</strong> — 物理页分配器、虚拟内存、页表 (两级)</li>
+    <li>&#10003; <strong>文件系统</strong> — 缓冲缓存、inode、目录、路径查找、7层设计</li>
+    <li>&#10003; <strong>系统调用</strong> — fork/exec/wait/exit/read/write/open/close 等 21 个</li>
+    <li>&#10003; <strong>同步机制</strong> — 自旋锁、睡眠锁、sleep/wakeup</li>
+    <li>&#10003; <strong>用户空间</strong> — init 进程、shell、基础用户程序</li>
+  </ul>
+</section>
+
+<section class="section quick-start">
+  <h2>快速开始 (Docker)</h2>
+  <ol>
+    <li>克隆项目：<code>git clone https://github.com/1998x-stack/tiny-projects.git</code></li>
+    <li>进入目录：<code>cd 01-toy-linux-kernel</code></li>
+    <li>构建镜像：<code>docker build -t toy-kernel .</code></li>
+    <li>运行容器：<code>docker run --rm -it toy-kernel</code></li>
+    <li>在容器内：<code>git clone https://github.com/mit-pdos/xv6-riscv.git && cd xv6-riscv && make qemu</code></li>
+  </ol>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div class="refs">
+    <div class="ref-card">
+      <h3>xv6 (MIT)</h3>
+      <p>MIT 的 Unix V6 教学重实现，支持 x86 多处理器</p>
+      <a href="https://github.com/mit-pdos/xv6-public" target="_blank">GitHub →</a>
+      <span style="color:#8b949e;font-size:0.85rem">★ 9.3K</span>
+    </div>
+    <div class="ref-card">
+      <h3>xv6-riscv</h3>
+      <p>xv6 的 RISC-V 移植版本 (当前维护版本)</p>
+      <a href="https://github.com/mit-pdos/xv6-riscv" target="_blank">GitHub →</a>
+    </div>
+    <div class="ref-card">
+      <h3>xv6-annotated</h3>
+      <p>逐行注释的 xv6 内核代码指南</p>
+      <a href="https://github.com/palladian1/xv6-annotated" target="_blank">GitHub →</a>
+    </div>
+    <div class="ref-card">
+      <h3>OSTEP</h3>
+      <p>Operating Systems: Three Easy Pieces 教材</p>
+      <a href="https://pages.cs.wisc.edu/~remzi/OSTEP/" target="_blank">在线阅读 →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Toy Linux Kernel &copy; 2026 — MIT License</p>
+  <p><a href="../" style="color:var(--accent2)">← 返回项目列表</a></p>
+</footer>
+</div>
+</body>
+</html>

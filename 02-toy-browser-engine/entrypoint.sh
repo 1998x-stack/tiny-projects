@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "========================================"
+echo "  Toy Browser Engine Dev Container"
+echo "========================================"
+echo ""
+echo "Rust (Robinson-style):"
+echo "  cargo new my-browser && cd my-browser"
+echo "  cargo run"
+echo ""
+echo "C++ (sherpa_41-style):"
+echo "  cmake . && make"
+echo ""
+exec "$@"

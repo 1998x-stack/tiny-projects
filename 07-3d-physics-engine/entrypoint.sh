@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "========================================"
+echo "  3D Physics Engine Dev Container"
+echo "========================================"
+echo ""
+echo "Build with CMake:"
+echo "  mkdir build && cd build && cmake .. && make"
+echo "  ./physics_sim"
+echo ""
+echo "Raylib available for visualization."
+echo "Eigen3 available for linear algebra."
+echo ""
+exec "$@"

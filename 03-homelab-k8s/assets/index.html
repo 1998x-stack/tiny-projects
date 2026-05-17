@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homelab K8S Cluster — 家庭 Kubernetes 集群</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #326ce5; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:1000px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:var(--accent); }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.9rem; }
+  th { background:#0d1117; color:var(--accent2); padding:0.6rem; text-align:left; border:1px solid var(--border); }
+  td { padding:0.6rem; border:1px solid var(--border); }
+  .stack { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.75rem; }
+  .stack-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .stack-card h3 { color:var(--accent2); font-size:0.95rem; margin-bottom:0.25rem; }
+  .stack-card p { color:#8b949e; font-size:0.85rem; }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { color:#d2a8ff; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>☸ <span>Homelab K8S</span> Cluster</h1>
+  <p class="subtitle" style="color:#8b949e;margin-top:0.5rem">GPU 节点 + 边缘节点 + GitOps 持久化维护</p>
+  <div class="badges">
+    <span class="badge">k3s</span><span class="badge">ArgoCD</span>
+    <span class="badge">Cilium</span><span class="badge">NVIDIA GPU</span>
+    <span class="badge">ARM Edge</span><span class="badge">Longhorn</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>技术栈</h2>
+  <div class="stack">
+    <div class="stack-card"><h3>K3S</h3><p>轻量级 Kubernetes 发行版，ARM 原生支持</p></div>
+    <div class="stack-card"><h3>ArgoCD</h3><p>GitOps 持续部署，App-of-Apps 模式</p></div>
+    <div class="stack-card"><h3>Cilium</h3><p>eBPF 网络 CNI，Hubble 可观测性</p></div>
+    <div class="stack-card"><h3>GPU Operator</h3><p>NVIDIA GPU 调度 + MPS 共享</p></div>
+    <div class="stack-card"><h3>Longhorn</h3><p>分布式块存储，快照备份恢复</p></div>
+    <div class="stack-card"><h3>cert-manager</h3><p>自动 Let's Encrypt TLS 证书</p></div>
+    <div class="stack-card"><h3>Cloudflare Tunnel</h3><p>无需端口转发的安全外部访问</p></div>
+    <div class="stack-card"><h3>External Secrets</h3><p>Vault/1Password 密钥同步</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>节点规格</h2>
+  <table>
+    <tr><th>角色</th><th>设备</th><th>CPU</th><th>RAM</th><th>存储</th></tr>
+    <tr><td>Control Plane × 3</td><td>Mini PC</td><td>4+ cores</td><td>8GB</td><td>50GB SSD</td></tr>
+    <tr><td>Worker × 3</td><td>Mini PC</td><td>6+ cores</td><td>16GB</td><td>100GB SSD</td></tr>
+    <tr><td>GPU Worker</td><td>PC + RTX 5080</td><td>8+ cores</td><td>32GB</td><td>500GB NVMe</td></tr>
+    <tr><td>Edge Node × 2</td><td>Raspberry Pi 5</td><td>4 cores</td><td>8GB</td><td>128GB</td></tr>
+    <tr><td>NAS</td><td>Synology</td><td>—</td><td>4GB+</td><td>4×4TB RAID5</td></tr>
+  </table>
+</section>
+
+<section class="section">
+  <h2>部署流程</h2>
+<pre><code># Phase 1: Bootstrap
+ansible-playbook -i inventory.yml playbooks/install-k3s.yml
+
+# Phase 2: GitOps
+kubectl apply -f root-argocd-app.yaml
+# ArgoCD 自动部署所有应用 — 基础设施 → 平台 → 工作负载</code></pre>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:1rem;"><strong style="color:var(--accent2)">k3s-ansible</strong><p style="font-size:0.85rem;color:#8b949e">Proxmox + Terraform + GPU</p><a href="https://github.com/lonelygno-me/k3s-ansible" style="color:var(--accent)">GitHub →</a></div>
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:1rem;"><strong style="color:var(--accent2)">homelab (ziwon)</strong><p style="font-size:0.85rem;color:#8b949e">GPU Operator + AI/ML</p><a href="https://github.com/ziwon/homelab" style="color:var(--accent)">GitHub →</a></div>
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:1rem;"><strong style="color:var(--accent2)">pi5cluster</strong><p style="font-size:0.85rem;color:#8b949e">混合 ARM/x86 + Flux</p><a href="https://github.com/affragak/pi5cluster" style="color:var(--accent)">GitHub →</a></div>
+  </div>
+</section>
+
+<footer><p>Homelab K8S Cluster &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>

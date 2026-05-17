@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toy Database — 小型数据库引擎</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #79c0ff; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:var(--accent); }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { color:#d2a8ff; }
+  .refs { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; }
+  .ref-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .ref-card h3 { color:var(--accent); margin-bottom:0.25rem; }
+  .ref-card a { color:var(--accent2); text-decoration:none; }
+  .arch-tree { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1.5rem; text-align:center; font-family:monospace; line-height:1.8; color:#8b949e; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>🗄 <span>Toy Database</span></h1>
+  <p class="subtitle" style="color:#8b949e;margin-top:0.5rem">B+ Tree · 并发读写 · 索引 · WAL 恢复</p>
+  <div class="badges">
+    <span class="badge">Rust / Go</span><span class="badge">B+ Tree</span>
+    <span class="badge">Concurrency</span><span class="badge">WAL</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>B+ Tree 结构</h2>
+  <div class="arch-tree">
+<pre>              ┌─────────────────┐
+              │   Root (Inner)  │
+              │ keys: [12, 25]  │
+              └───┬───────┬─────┘
+         ┌────────┘       └──────────┐
+         ▼                           ▼
+┌─────────────────┐         ┌─────────────────┐
+│ Inner Node      │         │ Inner Node      │
+│ keys: [3, 7]    │         │ keys: [18]      │
+└───┬───┬───┐     │         └───┬───────┐     │
+    ▼   ▼   ▼     ▼             ▼       ▼     ▼
+┌───┐┌───┐┌───┐┌───┐      ┌───┐  ┌───┐
+│ L ││ L ││ L ││ L │      │ L │  │ L │
+│1 2││3 5││7 9││12 │      │15 │  │18 │
+│   ││   ││   ││14 │      │17 │  │25 │
+└───┘└───┘└───┘└───┘      └───┘  └───┘
+  Leaf nodes linked → for range scans</pre>
+  </div>
+</section>
+
+<section class="section">
+  <h2>并发控制 — 锁耦合协议</h2>
+  <pre><code>读操作: 根→叶 共享锁, 获取子节点后释放父节点锁
+写操作: 乐观共享锁下行, 叶节点升级为排他锁
+         若叶节点需分裂 → 从根重启, 沿途不安全节点加排他锁</code></pre>
+</section>
+
+<section class="section">
+  <h2>快速开始</h2>
+  <pre><code>docker build -t toy-database .
+docker run --rm -it -v $(pwd):/workspace toy-database
+# 容器内: cargo new toy-db && cd toy-db</code></pre>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div class="refs">
+    <div class="ref-card"><h3>toydb</h3><p>Rust 分布式 SQL 数据库 (学习项目)</p><a href="https://github.com/polyrabbit/toydb">GitHub →</a></div>
+    <div class="ref-card"><h3>baobab</h3><p>Go B+ Tree 键值存储</p><a href="https://github.com/oryankibandi/baobab">GitHub →</a></div>
+    <div class="ref-card"><h3>jcsherin/btree</h3><p>线程安全 B+Tree 并发协议参考</p><a href="https://github.com/jcsherin/btree">GitHub →</a></div>
+    <div class="ref-card"><h3>Let's Build a Simple Database</h3><p>C 语言 SQLite 克隆教程</p><a href="https://github.com/cstack/db_tutorial">GitHub →</a></div>
+  </div>
+</section>
+
+<footer><p>Toy Database &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>

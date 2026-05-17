@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "========================================"
+echo "  Toy Database Dev Container"
+echo "========================================"
+echo ""
+echo "Rust (toydb-style):"
+echo "  cargo new toy-db && cd toy-db"
+echo "  cargo run"
+echo ""
+echo "Testing B+ Tree:"
+echo "  cargo test"
+echo ""
+exec "$@"

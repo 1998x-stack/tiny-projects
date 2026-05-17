@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "========================================"
+echo "  Toy PyTorch Dev Container"
+echo "========================================"
+echo ""
+echo "Run Jupyter notebook:"
+echo "  jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root"
+echo ""
+echo "Run tests:"
+echo "  python -m pytest"
+echo ""
+exec "$@"

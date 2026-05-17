@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Physics Engine — 三维物理引擎</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #d29922; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:var(--accent); }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { color:#d2a8ff; }
+  .pipeline { display:grid; grid-template-columns: repeat(4,1fr); gap:0.5rem; text-align:center; }
+  .pipe-step { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:0.75rem; font-size:0.8rem; }
+  .pipe-step strong { display:block; color:var(--accent2); margin-bottom:0.25rem; }
+  .refs { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; }
+  .ref-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .ref-card h3 { color:var(--accent); margin-bottom:0.25rem; }
+  .ref-card a { color:var(--accent2); text-decoration:none; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>⚛ <span>3D Physics Engine</span></h1>
+  <p class="subtitle" style="color:#8b949e;margin-top:0.5rem">刚体动力学 · GJK/EPA 碰撞检测 · XPBD 约束求解</p>
+  <div class="badges">
+    <span class="badge">C++</span><span class="badge">GJK</span>
+    <span class="badge">XPBD</span><span class="badge">Quaternions</span>
+    <span class="badge">Raylib</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>模拟循环</h2>
+  <div class="pipeline">
+    <div class="pipe-step"><strong>施力</strong>重力、阻尼、外力</div>
+    <div class="pipe-step"><strong>积分</strong>半隐式欧拉积分</div>
+    <div class="pipe-step"><strong>碰撞检测</strong>GJK → EPA → 接触点生成</div>
+    <div class="pipe-step"><strong>约束求解</strong>冲量 + 位置修正</div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>碰撞检测管线</h2>
+  <pre><code>Broad Phase (Octree / BVH)
+  └── 候选碰撞对
+      └── Narrow Phase (GJK)
+          └── 分离? → 跳过
+          └── 穿透? → EPA → 穿透深度 + 法线
+              └── Contact Manifold (Sutherland-Hodgman 裁剪)
+                  └── 约束求解</code></pre>
+</section>
+
+<section class="section">
+  <h2>快速开始</h2>
+  <pre><code>docker build -t physics-engine .
+docker run --rm -it -v $(pwd):/workspace physics-engine
+# 容器内: cmake . && make && ./physics_sim</code></pre>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div class="refs">
+    <div class="ref-card"><h3>raw-physics</h3><p>C 语言 XPBD 刚体物理 ★196</p><a href="https://github.com/felipeek/raw-physics">GitHub →</a></div>
+    <div class="ref-card"><h3>Riemann</h3><p>3D 碰撞检测 + 物理引擎</p><a href="https://github.com/atlantis13579/Riemann">GitHub →</a></div>
+    <div class="ref-card"><h3>basic-physics</h3><p>最小刚体模拟 (C#)</p><a href="https://github.com/george7378/basic-physics">GitHub →</a></div>
+    <div class="ref-card"><h3>physics3D</h3><p>C++ 刚体 + Octree 宽相碰撞</p><a href="https://github.com/NathanMacLeod/physics3D">GitHub →</a></div>
+  </div>
+</section>
+
+<footer><p>3D Physics Engine &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>

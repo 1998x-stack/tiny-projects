@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toy Browser Engine — 玩具浏览器渲染引擎</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #58a6ff; --accent2: #3fb950; --rust: #dea584; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:#dea584; }
+  .subtitle { color:#8b949e; font-size:1.1rem; }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  .pipeline { display:grid; grid-template-columns: repeat(5,1fr); gap:0.5rem; text-align:center; margin:1.5rem 0; }
+  .pipe-step { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:0.75rem; font-size:0.85rem; }
+  .pipe-step strong { display:block; color:var(--accent2); margin-bottom:0.25rem; }
+  .refs { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; }
+  .ref-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .ref-card h3 { color:var(--accent); margin-bottom:0.25rem; }
+  .ref-card a { color:var(--accent2); text-decoration:none; }
+  .quick-start code { color:#dea584; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1><span>◈</span> Toy Browser Engine</h1>
+  <p class="subtitle">从零构建的玩具浏览器渲染引擎</p>
+  <div class="badges">
+    <span class="badge" style="color:var(--rust)">Rust / C++ / TypeScript</span>
+    <span class="badge">HTML Parser</span>
+    <span class="badge">CSS Engine</span>
+    <span class="badge">Layout</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>渲染管线</h2>
+  <div class="pipeline">
+    <div class="pipe-step"><strong>HTML</strong> Tokenizer → DOM Tree</div>
+    <div class="pipe-step"><strong>CSS</strong> Parser → Rules</div>
+    <div class="pipe-step"><strong>Style</strong> Cascade → Style Tree</div>
+    <div class="pipe-step"><strong>Layout</strong> Box Model → Positions</div>
+    <div class="pipe-step"><strong>Paint</strong> Render → PNG</div>
+  </div>
+</section>
+
+<section class="section quick-start">
+  <h2>快速开始</h2>
+  <pre><code>docker build -t toy-browser .
+docker run --rm -it -v $(pwd):/workspace toy-browser
+# 容器内: cargo new my-browser && cd my-browser</code></pre>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div class="refs">
+    <div class="ref-card"><h3>Robinson</h3><p>Matt Brubeck 的 Rust 玩具引擎</p><a href="https://github.com/mbrubeck/robinson">GitHub ★1.6K</a></div>
+    <div class="ref-card"><h3>sherpa_41</h3><p>C++ 浏览器引擎 (CMake)</p><a href="https://github.com/ayazhafiz/sherpa_41">GitHub ★35</a></div>
+    <div class="ref-card"><h3>mini_browser</h3><p>C++17 + Qt6 完整浏览器</p><a href="https://github.com/beginner-jhj/mini_browser">GitHub</a></div>
+    <div class="ref-card"><h3>Let's build a browser engine!</h3><p>系列博客教程</p><a href="https://limpet.net/mbrubeck/2014/08/08/toy-layout-engine-1.html">阅读 →</a></div>
+  </div>
+</section>
+
+<footer><p>Toy Browser Engine &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>

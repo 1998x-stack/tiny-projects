@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toy PyTorch — 微型自动微分引擎</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #c9d1d9; --accent: #ee4c2c; --accent2: #3fb950; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height:1.6; }
+  .container { max-width:900px; margin:0 auto; padding:2rem; }
+  header { text-align:center; padding:4rem 0 2rem; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.5rem; color:#fff; }
+  h1 span { color:var(--accent); }
+  .badges { display:flex; gap:0.5rem; justify-content:center; margin:1.5rem 0; flex-wrap:wrap; }
+  .badge { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.85rem; background:var(--surface); border:1px solid var(--border); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin:1.5rem 0; }
+  h2 { color:var(--accent); margin-bottom:1rem; }
+  pre { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; overflow-x:auto; font-size:0.85rem; }
+  code { color:#d2a8ff; }
+  .refs { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; }
+  .ref-card { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; }
+  .ref-card h3 { color:var(--accent); margin-bottom:0.25rem; }
+  .ref-card a { color:var(--accent2); text-decoration:none; }
+  .demo { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:1rem; margin:1rem 0; }
+  .demo .keyword { color:#ff7b72; } .demo .func { color:#d2a8ff; } .demo .str { color:#a5d6ff; }
+  footer { text-align:center; padding:2rem; color:#8b949e; font-size:0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>🔥 <span>Toy PyTorch</span></h1>
+  <p class="subtitle" style="color:#8b949e;margin-top:0.5rem">纯 Python 自动微分引擎 — 不用科学计算库，100% 从零构建</p>
+  <div class="badges">
+    <span class="badge">Python</span><span class="badge">Autograd</span>
+    <span class="badge">Neural Networks</span><span class="badge">~150 LOC</span>
+  </div>
+</header>
+
+<section class="section">
+  <h2>核心概念 — Value 类</h2>
+  <div class="demo">
+<pre><code><span class="keyword">class</span> <span class="func">Value</span>:
+    <span class="keyword">def</span> __init__(self, data, _children=(), _op=''):
+        self.data = data          <span class="str"># 标量值</span>
+        self.grad = 0.0           <span class="str"># 梯度累积</span>
+        self._backward = <span class="keyword">lambda</span>: None  <span class="str"># 局部梯度闭包</span>
+        self._prev = set(_children)   <span class="str"># 计算图子节点</span>
+
+    <span class="keyword">def</span> __add__(self, other):
+        out = Value(self.data + other.data, (self, other), '+')
+        <span class="keyword">def</span> _backward():
+            self.grad += out.grad
+            other.grad += out.grad
+        out._backward = _backward
+        <span class="keyword">return</span> out</code></pre>
+  </div>
+</section>
+
+<section class="section">
+  <h2>神经网络 API (类 PyTorch 风格)</h2>
+  <div class="demo">
+<pre><code>model = MLP(2, [16, 16, 1])  <span class="str"># 2输入, 2隐藏层, 1输出</span>
+optimizer = SGD(model.parameters(), lr=0.01)
+
+<span class="keyword">for</span> epoch <span class="keyword">in</span> range(100):
+    y_pred = [model(x) <span class="keyword">for</span> x <span class="keyword">in</span> X]
+    loss = mse_loss(y_pred, Y)
+
+    optimizer.zero_grad()
+    loss.backward()   <span class="str"># 拓扑排序 → 链式法则</span>
+    optimizer.step()  <span class="str"># w -= lr * grad</span></code></pre>
+  </div>
+</section>
+
+<section class="section quick-start">
+  <h2>快速开始</h2>
+  <pre><code>docker build -t toy-pytorch .
+docker run --rm -it -p 8888:8888 -v $(pwd):/workspace toy-pytorch
+# 容器内启动 Jupyter</code></pre>
+</section>
+
+<section class="section">
+  <h2>参考实现</h2>
+  <div class="refs">
+    <div class="ref-card"><h3>micrograd</h3><p>Andrej Karpathy 的标量自动微分引擎</p><a href="https://github.com/karpathy/micrograd">GitHub ★15K</a></div>
+    <div class="ref-card"><h3>tinygrad</h3><p>介于 PyTorch 和 micrograd 之间</p><a href="https://github.com/tinygrad/tinygrad">GitHub ★32K</a></div>
+    <div class="ref-card"><h3>micrograd 讲解视频</h3><p>Karpathy 的逐行讲解</p><a href="https://youtu.be/VMj-3S1tku0">YouTube →</a></div>
+  </div>
+</section>
+
+<footer><p>Toy PyTorch &copy; 2026 — MIT License | <a href="../" style="color:var(--accent2)">← 返回</a></p></footer>
+</div>
+</body>
+</html>
