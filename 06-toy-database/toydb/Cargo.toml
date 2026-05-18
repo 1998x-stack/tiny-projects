@@ -1,0 +1,11 @@
+[package]
+name = "toydb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "2"
+crc32fast = "1"
+
+[dev-dependencies]
+rand = "0.8"
