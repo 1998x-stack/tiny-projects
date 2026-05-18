@@ -25,55 +25,6 @@ impl PageType {
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
-pub struct PageHeader {
-    pub page_type: u8,
-    pub num_cells: u16,
-    pub parent_page_id: u32,
-    pub next_leaf: u32,
-    pub checksum: u32,
-    _padding: [u8; 2],
-}
-
-impl PageHeader {
-    pub fn new(page_type: PageType) -> Self {
-        Self {
-            page_type: page_type as u8,
-            num_cells: 0,
-            parent_page_id: 0,
-            next_leaf: 0,
-            checksum: 0,
-            _padding: [0; 2],
-        }
-    }
-
-    pub fn page_type_enum(&self) -> Option<PageType> {
-        PageType::from_u8(self.page_type)
-    }
-
-    pub fn serialize(&self) -> [u8; HEADER_SIZE] {
-        let mut buf = [0u8; HEADER_SIZE];
-        buf[0] = self.page_type;
-        buf[1..3].copy_from_slice(&self.num_cells.to_be_bytes());
-        buf[3..7].copy_from_slice(&self.parent_page_id.to_be_bytes());
-        buf[7..11].copy_from_slice(&self.next_leaf.to_be_bytes());
-        buf[11..15].copy_from_slice(&self.checksum.to_be_bytes());
-        buf
-    }
-
-    pub fn deserialize(buf: &[u8; HEADER_SIZE]) -> Self {
-        Self {
-            page_type: buf[0],
-            num_cells: u16::from_be_bytes([buf[1], buf[2]]),
-            parent_page_id: u32::from_be_bytes([buf[3], buf[4], buf[5], buf[6]]),
-            next_leaf: u32::from_be_bytes([buf[7], buf[8], buf[9], buf[10]]),
-            checksum: u32::from_be_bytes([buf[11], buf[12], buf[13], buf[14]]),
-            _padding: [buf[15], 0],
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Page {
     pub id: PageId,
@@ -84,28 +35,28 @@ pub struct Page {
 impl Page {
     pub fn new(id: PageId, page_type: PageType) -> Self {
         let mut data = Box::new([0u8; PAGE_SIZE]);
-        let header = PageHeader::new(page_type);
-        let hdr = header.serialize();
-        data[..HEADER_SIZE].copy_from_slice(&hdr);
+        data[0] = page_type as u8;
         Self { id, data, is_dirty: false }
     }
 
-    pub fn header(&self) -> PageHeader {
-        let mut hdr_buf = [0u8; HEADER_SIZE];
-        hdr_buf.copy_from_slice(&self.data[..HEADER_SIZE]);
-        PageHeader::deserialize(&hdr_buf)
-    }
-
-    pub fn header_mut(&mut self) -> &mut PageHeader {
-        unsafe { &mut *(self.data.as_mut_ptr() as *mut PageHeader) }
-    }
-
     pub fn page_type(&self) -> PageType {
-        self.header().page_type_enum().unwrap()
+        PageType::from_u8(self.data[0]).unwrap()
     }
 
     pub fn num_cells(&self) -> u16 {
-        self.header().num_cells
+        u16::from_be_bytes([self.data[1], self.data[2]])
+    }
+
+    pub fn next_leaf(&self) -> u32 {
+        u32::from_be_bytes([self.data[7], self.data[8], self.data[9], self.data[10]])
+    }
+
+    pub fn set_num_cells(&mut self, n: u16) {
+        self.data[1..3].copy_from_slice(&n.to_be_bytes());
+    }
+
+    pub fn set_next_leaf(&mut self, id: u32) {
+        self.data[7..11].copy_from_slice(&id.to_be_bytes());
     }
 
     // ─── Leaf cell methods ───
@@ -136,7 +87,23 @@ impl Page {
         pos += 2;
         self.data[pos..pos+value.len()].copy_from_slice(value);
 
-        self.header_mut().num_cells += 1;
+        self.set_num_cells(self.num_cells() + 1);
+    }
+
+    pub fn leaf_key_at(&self, idx: u16) -> Option<&[u8]> {
+        if idx >= self.num_cells() { return None; }
+        let mut pos = self.leaf_cell_offset(idx);
+        let key_len = u16::from_be_bytes([self.data[pos], self.data[pos+1]]) as usize;
+        pos += 2;
+        Some(&self.data[pos..pos+key_len])
+    }
+
+    pub fn inner_key_at(&self, idx: u16) -> Option<&[u8]> {
+        if idx >= self.num_cells() { return None; }
+        let mut pos = self.inner_cell_offset(idx);
+        let key_len = u16::from_be_bytes([self.data[pos], self.data[pos+1]]) as usize;
+        pos += 2;
+        Some(&self.data[pos..pos+key_len])
     }
 
     pub fn leaf_cell_at(&self, idx: u16) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -167,7 +134,7 @@ impl Page {
         for i in (end_pos - cell_size)..end_pos {
             self.data[i] = 0;
         }
-        self.header_mut().num_cells -= 1;
+        self.set_num_cells(self.num_cells() - 1);
     }
 
     // ─── Inner node cell methods ───
@@ -204,7 +171,7 @@ impl Page {
         pos += key.len();
         self.data[pos..pos+4].copy_from_slice(&child_id.to_be_bytes());
 
-        self.header_mut().num_cells += 1;
+        self.set_num_cells(self.num_cells() + 1);
     }
 
     pub fn inner_cell_at(&self, idx: u16) -> Option<(Vec<u8>, PageId)> {
@@ -232,7 +199,7 @@ impl Page {
         for i in (end_pos - cell_size)..end_pos {
             self.data[i] = 0;
         }
-        self.header_mut().num_cells -= 1;
+        self.set_num_cells(self.num_cells() - 1);
     }
 
     // ─── Binary search ───
@@ -245,12 +212,12 @@ impl Page {
         while lo < hi {
             let mid = (lo + hi) / 2;
             let key = if self.page_type() == PageType::Inner {
-                self.inner_cell_at(mid as u16).map(|(k, _)| k)
+                self.inner_key_at(mid as u16)
             } else {
-                self.leaf_cell_at(mid as u16).map(|(k, _)| k)
+                self.leaf_key_at(mid as u16)
             };
             if let Some(key) = key {
-                if &key[..] < search_key { lo = mid + 1; }
+                if key < search_key { lo = mid + 1; }
                 else { hi = mid; }
             } else {
                 hi = mid;
@@ -261,22 +228,28 @@ impl Page {
 
     pub fn child_page_id_for_key(&self, key: &[u8]) -> PageId {
         let idx = self.lower_bound(key);
-        if idx == 0 {
-            self.first_child_page_id()
-        } else if idx <= self.num_cells() {
-            self.inner_cell_at(idx - 1).map(|(_, id)| id).unwrap_or(0)
-        } else {
-            self.inner_cell_at(self.num_cells() - 1).map(|(_, id)| id).unwrap_or(0)
+        // If key matches the cell at idx exactly, follow that cell's right child
+        if idx < self.num_cells() {
+            if let Some(k) = self.inner_key_at(idx) {
+                if k == key {
+                    return self.inner_cell_at(idx).map(|(_, id)| id).unwrap_or(0);
+                }
+            }
+            if idx > 0 {
+                return self.inner_cell_at(idx - 1).map(|(_, id)| id).unwrap_or(0);
+            }
+        } else if idx > 0 {
+            return self.inner_cell_at(idx - 1).map(|(_, id)| id).unwrap_or(0);
         }
+        self.first_child_page_id()
     }
 
     // ─── Checksum ───
 
     pub fn compute_checksum(&self) -> u32 {
-        let mut data_copy = *self.data.clone();
-        data_copy[11..15].copy_from_slice(&[0u8; 4]);
         let mut hasher = crc32fast::Hasher::new();
-        hasher.update(&data_copy[..]);
+        hasher.update(&self.data[..11]);
+        hasher.update(&self.data[15..]);
         hasher.finalize()
     }
 

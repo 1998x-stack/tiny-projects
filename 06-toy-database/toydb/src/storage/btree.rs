@@ -58,13 +58,12 @@ impl BPlusTree {
 
         let idx = page.lower_bound(key) as u16;
         if (page.num_cells() as usize) < self.leaf_max_cells {
-            let mut leaf = self.store.read_page(page.id)?;
-            leaf.insert_leaf_cell(idx, key, value);
-            self.store.write_page(&leaf)?;
+            page.insert_leaf_cell(idx, key, value);
+            self.store.write_page(&page)?;
             return Ok(());
         }
 
-        let mut leaf = self.store.read_page(page.id)?;
+        let mut leaf = page;
         let (mut left, mut right, separator_key) = self.split_leaf(&mut leaf, idx, key, value);
         let mut right_page_id = right.id;
         let mut sep = separator_key;
@@ -115,8 +114,8 @@ impl BPlusTree {
         }
 
         let sep = new_leaf.leaf_cell_at(0).unwrap().0;
-        new_leaf.header_mut().next_leaf = leaf.header().next_leaf;
-        leaf.header_mut().next_leaf = new_page_id;
+        new_leaf.set_next_leaf(leaf.next_leaf());
+        leaf.set_next_leaf(new_page_id);
 
         (leaf.clone(), new_leaf, sep)
     }
@@ -150,17 +149,18 @@ impl BPlusTree {
         if self.root_page_id == 0 { return Ok(()); }
 
         let mut page = self.store.read_page(self.root_page_id)?;
+        let mut path: Vec<(u32, Page)> = Vec::new();
         while page.page_type() == PageType::Inner {
             let child_id = page.child_page_id_for_key(key);
+            path.push((page.id, page));
             page = self.store.read_page(child_id)?;
         }
 
         let idx = page.lower_bound(key);
         if let Some((k, _)) = page.leaf_cell_at(idx) {
             if &k[..] == key {
-                let mut leaf = self.store.read_page(page.id)?;
-                leaf.remove_leaf_cell(idx);
-                self.store.write_page(&leaf)?;
+                page.remove_leaf_cell(idx);
+                self.store.write_page(&page)?;
             }
         }
         Ok(())
@@ -182,7 +182,7 @@ impl BPlusTree {
                 if &key[..] > end { return Ok(results); }
                 if &key[..] >= start { results.push((key, val)); }
             }
-            let next_id = page.header().next_leaf;
+            let next_id = page.next_leaf();
             if next_id == 0 { break; }
             page = self.store.read_page(next_id)?;
         }
