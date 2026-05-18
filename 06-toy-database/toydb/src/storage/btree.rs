@@ -56,7 +56,7 @@ impl BPlusTree {
             page = self.store.read_page(child_id)?;
         }
 
-        let idx = page.lower_bound(key) as u16;
+        let idx = page.lower_bound(key);
         if (page.num_cells() as usize) < self.leaf_max_cells {
             page.insert_leaf_cell(idx, key, value);
             self.store.write_page(&page)?;
@@ -103,7 +103,7 @@ impl BPlusTree {
         let new_page_id = self.store.allocate_page().unwrap();
         let mut new_leaf = Page::new(new_page_id, PageType::Leaf);
 
-        let mid = ((self.leaf_max_cells + 1) / 2) as u16;
+        let mid = self.leaf_max_cells.div_ceil(2) as u16;
 
         leaf.insert_leaf_cell(insert_idx, key, value);
 
@@ -124,19 +124,19 @@ impl BPlusTree {
         let new_page_id = self.store.allocate_page().unwrap();
         let mut new_inner = Page::new(new_page_id, PageType::Inner);
 
-        let mid = ((self.inner_max_cells + 1) / 2) as u16;
+        let mid = self.inner_max_cells.div_ceil(2) as u16;
 
         let ins_idx = inner.lower_bound(insert_key);
         inner.insert_inner_cell(ins_idx, insert_key, child_page_id);
 
-        let sep = inner.inner_cell_at(mid as u16).unwrap().0;
+        let sep = inner.inner_cell_at(mid).unwrap().0;
 
         new_inner.set_first_child_page_id(
-            inner.inner_cell_at(mid as u16).map(|(_, id)| id).unwrap_or(0)
+            inner.inner_cell_at(mid).map(|(_, id)| id).unwrap_or(0)
         );
-        inner.remove_inner_cell(mid as u16);
+        inner.remove_inner_cell(mid);
 
-        for i in ((mid as u16)..inner.num_cells()).rev() {
+        for i in (mid..inner.num_cells()).rev() {
             let (k, c) = inner.inner_cell_at(i).unwrap();
             new_inner.insert_inner_cell(0, &k, c);
             inner.remove_inner_cell(i);

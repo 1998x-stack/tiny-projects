@@ -9,6 +9,12 @@ pub struct MemoryPageStore {
     freelist: Mutex<Vec<PageId>>,
 }
 
+impl Default for MemoryPageStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryPageStore {
     pub fn new() -> Self {
         Self {
