@@ -1,6 +1,11 @@
 #include "core/world.h"
 #include "math/math_utils.h"
 #include "shapes/shape.h"
+#include "collision/broadphase.h"
+#include "collision/gjk.h"
+#include "collision/epa.h"
+#include "constraints/solver.h"
+#include "core/sleep.h"
 #include <algorithm>
 #include <cmath>
 
@@ -73,26 +78,51 @@ void World::integrate(float dt) {
 void World::detect_collisions(float dt) {
     (void)dt;
     m_contacts.clear();
+
+    auto pairs = OctreeBroadphase::find_pairs(m_bodies);
+
+    for (const auto& pair : pairs) {
+        if (pair.body_a->is_sleeping && pair.body_b->is_sleeping) continue;
+        if (!pair.body_a->shape || !pair.body_b->shape) continue;
+        if (!pair.body_a->is_dynamic() && !pair.body_b->is_dynamic()) continue;
+
+        GJKResult gjk_result = gjk(*pair.body_a->shape, *pair.body_b->shape);
+        if (!gjk_result.overlap) continue;
+
+        EPAResult epa_result = epa(*pair.body_a->shape, *pair.body_b->shape, gjk_result.simplex);
+        if (!epa_result.success || epa_result.depth <= 0.001f) continue;
+
+        ContactManifold manifold;
+        manifold.body_a = pair.body_a;
+        manifold.body_b = pair.body_b;
+        manifold.normal = epa_result.normal;
+        manifold.friction = std::sqrt(pair.body_a->friction * pair.body_b->friction);
+        manifold.restitution = maxf(pair.body_a->restitution, pair.body_b->restitution);
+
+        ContactPoint cp;
+        cp.normal = epa_result.normal;
+        cp.penetration = epa_result.depth;
+        cp.point_a = pair.body_a->position - epa_result.normal * (epa_result.depth * 0.5f);
+        cp.point_b = pair.body_b->position + epa_result.normal * (epa_result.depth * 0.5f);
+        manifold.points.push_back(cp);
+
+        m_contacts.push_back(manifold);
+
+        wake_body(*pair.body_a);
+        wake_body(*pair.body_b);
+    }
 }
 
 void World::solve_constraints(float dt) {
-    (void)dt;
+    SolverInput input;
+    input.manifolds = m_contacts;
+    input.dt = dt;
+    input.params = m_params;
+    ConstraintSolver::solve(input);
 }
 
 void World::update_sleep(float dt) {
     for (auto& body : m_bodies) {
-        if (!body->is_dynamic()) continue;
-        if (length(body->linear_velocity) < m_params.sleep_linear_threshold &&
-            length(body->angular_velocity) < m_params.sleep_angular_threshold) {
-            body->sleep_timer += dt;
-            if (body->sleep_timer > m_params.sleep_timeout && !body->is_sleeping) {
-                body->is_sleeping = true;
-                body->linear_velocity = vec3(0);
-                body->angular_velocity = vec3(0);
-            }
-        } else {
-            body->sleep_timer = 0.0f;
-            body->is_sleeping = false;
-        }
+        update_sleep_body(*body, dt, m_params);
     }
 }
