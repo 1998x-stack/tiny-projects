@@ -5,13 +5,14 @@ from config import load_config
 from provider import Provider
 from agent import Agent
 from tools import ToolRegistry
-from tools.files import ReadTool
+from tools.files import ReadTool, WriteTool, EditTool
 from tools.bash import BashTool
+from tools.search import GrepTool, GlobTool
 
 
 def build_tool_registry(permission_checker=None):
     registry = ToolRegistry(permission_checker=permission_checker)
-    for tool_cls in [ReadTool, BashTool]:
+    for tool_cls in [ReadTool, WriteTool, EditTool, BashTool, GrepTool, GlobTool]:
         registry.register(tool_cls())
     return registry
 
