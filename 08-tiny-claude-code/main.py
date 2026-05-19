@@ -17,6 +17,7 @@ from prompt import build_system_prompt
 from context import ContextManager
 from permissions import PermissionChecker
 from session import SessionManager
+from tools.subagent import SubagentTool
 from render import console, render_chunk, render_end
 
 
@@ -108,6 +109,7 @@ def main():
         return build_system_prompt(cwd=cwd, todos=todo_tool.todos)
 
     agent = Agent(provider, tools, system_prompt, pre_call=context_mgr.maybe_compact)
+    tools.register(SubagentTool(agent))
     session = PromptSession(history=FileHistory(".tiny-claude-history"))
 
     console.print("[bold]Tiny Claude Code[/bold] — /help for commands, Ctrl+D to exit\n")
