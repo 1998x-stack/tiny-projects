@@ -1,6 +1,9 @@
 import os
 import sys
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+
 from config import load_config
 from provider import Provider
 from agent import Agent
@@ -10,6 +13,7 @@ from tools.bash import BashTool
 from tools.search import GrepTool, GlobTool
 from tools.todo import TodoTool
 from prompt import build_system_prompt
+from render import console, render_chunk, render_end
 
 
 def build_tool_registry(permission_checker=None):
@@ -31,23 +35,22 @@ def main():
         return build_system_prompt(cwd=cwd, todos=todo_tool.todos)
 
     agent = Agent(provider, tools, system_prompt)
+    session = PromptSession(history=FileHistory(".tiny-claude-history"))
 
-    print("Tiny Claude Code — Ctrl+D to exit\n")
+    console.print("[bold]Tiny Claude Code[/bold] — Ctrl+D to exit\n")
 
     while True:
         try:
-            user_input = input(">>> ").strip()
+            user_input = session.prompt(">>> ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nBye!")
+            console.print("\n[dim]Bye![/]")
             break
         if not user_input:
             continue
         agent.messages.append({"role": "user", "content": user_input})
-        result = agent.run()
-        last = result[-1]
-        for block in last["content"]:
-            if block["type"] == "text":
-                print(f"\n{block['text']}\n")
+        for chunk in agent.run_stream():
+            render_chunk(chunk)
+        render_end()
 
 
 if __name__ == "__main__":
