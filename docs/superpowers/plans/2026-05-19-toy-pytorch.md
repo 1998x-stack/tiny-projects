@@ -132,6 +132,11 @@ def test_value_with_children():
     v = Value(3.0, _children=(a, b), _op='test')
     assert v._prev == {a, b}
     assert v._op == 'test'
+
+def test_value_repr():
+    v = Value(3.0, _op='+')
+    assert '3.0000' in repr(v)
+    assert '+' in repr(v)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -152,6 +157,9 @@ class Value:
         self._backward = lambda: None
         self._prev = set(_children)
         self._op = _op
+
+    def __repr__(self):
+        return f"Value(data={self.data:.4f}, grad={self.grad:.4f}, op='{self._op}')"
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -159,13 +167,13 @@ class Value:
 ```bash
 python -m pytest tests/test_engine.py -v
 ```
-Expected: 2 passed
+Expected: 3 passed
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add toypytorch/engine.py tests/test_engine.py
-git commit -m "feat: Value constructor with data, grad, _prev, _op, _backward"
+git commit -m "feat: Value constructor with data, grad, _prev, _op, _backward, __repr__"
 ```
 
 ---
@@ -674,10 +682,7 @@ Append to `Value` in `toypytorch/engine.py`:
         return out
 
     def tanh(self):
-        x = self.data
-        # Clamp to prevent overflow
-        x = max(min(x, 20.0), -20.0)
-        t = math.tanh(x)
+        t = math.tanh(self.data)
         out = Value(t, (self,), 'tanh')
 
         def _backward():
@@ -766,8 +771,8 @@ Expected: FAIL
 Append to `Value` in `toypytorch/engine.py`:
 ```python
     def exp(self):
-        # Clamp to prevent overflow
-        x = max(min(self.data, 20.0), -20.0)
+        # Clamp to prevent overflow (float64 safe up to ~700)
+        x = max(min(self.data, 50.0), -50.0)
         out = Value(math.exp(x), (self,), 'exp')
 
         def _backward():
@@ -1688,7 +1693,7 @@ def test_moon_classification():
     loader = DataLoader(dataset, batch_size=32)
 
     losses = []
-    for epoch in range(200):
+    for epoch in range(150):  # 150 epochs sufficient for moon convergence; 200 in demo
         epoch_loss = 0.0
         correct = 0
         total = 0

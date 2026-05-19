@@ -2,6 +2,8 @@
 
 > Based on: micrograd (Andrej Karpathy), tinygrad
 > Build a scalar autograd engine + neural network library from scratch in pure Python. No numpy, no PyTorch — just Python floats and the chain rule.
+>
+> **Domain terms**: `Value` — the scalar node in the computation graph (cf. PyTorch's `Tensor`, micrograd's `Value`).
 
 ## References
 
@@ -125,8 +127,8 @@ class Value:
 | `a * b` | `a.data * b.data` | `a.grad += b.data * out.grad` ; `b.grad += a.data * out.grad` | — |
 | `a ** n` | `a.data ** n` (n: int) | `a.grad += n * a.data**(n-1) * out.grad` | Integer n only (no fractional-power gradient) |
 | `a.relu()` | `max(0, a.data)` | `a.grad += (out.data > 0) * out.grad` | Subgradient = 0 at x=0 (standard practice) |
-| `a.tanh()` | `tanh(a.data)` | `a.grad += (1 - out.data**2) * out.grad` | Clamp input to ±20 to prevent overflow |
-| `a.exp()` | `exp(a.data)` | `a.grad += out.data * out.grad` | Clamp input to ±20 (`exp(20) ≈ 4.8e8`) |
+| `a.tanh()` | `tanh(a.data)` | `a.grad += (1 - out.data**2) * out.grad` | No clamping needed — Python math.tanh handles large inputs safely |
+| `a.exp()` | `exp(a.data)` | `a.grad += out.data * out.grad` | Clamp input to ±50 to prevent overflow (`exp(50) ≈ 5.2e21`, safe in float64) |
 | `a.log()` | `log(a.data + 1e-7)` | `a.grad += (1/(a.data + 1e-7)) * out.grad` | Epsilon prevents log(0) and division by zero |
 | `a / b` | `a.data / b.data` | `a.grad += (1/b.data) * out.grad` ; `b.grad += (-a.data/b.data**2) * out.grad` | Implement as `a * (b ** -1)` |
 | `-a` | `-a.data` | `a.grad += -out.grad` | Implement as `a * -1` |
@@ -503,8 +505,8 @@ def test_random_graph_gradients():
 │ Goal: Train a 2-16-16-1 MLP to separate two interleaving │
 │       half-moons (non-linearly separable data)           │
 ├─────────────────────────────────────────────────────────┤
-│ Data:      sklearn.datasets.make_moons(n_samples=200,    │
-│            noise=0.1)                                    │
+│ Data:      Hand-rolled moon generator (zero dependencies).             │
+│            sklearn.datasets.make_moons can be substituted.             │
 │ Model:     MLP(2, [16, 16, 1])                          │
 │ Loss:      binary_cross_entropy                          │
 │ Optimizer: Adam(lr=0.01)                                 │
