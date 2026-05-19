@@ -24,3 +24,7 @@ endif()
 
 enable_testing()
 add_subdirectory(tests)
+
+if(raylib_FOUND)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../examples examples_build)
+endif()
