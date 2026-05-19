@@ -11,16 +11,16 @@ class Provider:
     def create(self, system, messages, tools):
         response = completion(
             model=self.model,
-            messages=[{"role": "system", "content": system}] + messages,
-            tools=self._to_litellm_tools(tools),
+            messages=[{"role": "system", "content": system}] + self._to_litellm_messages(messages),
+            tools=self._to_litellm_tools(tools) if tools else None,
         )
         return self._normalize(response)
 
     def stream(self, system, messages, tools):
         raw = completion(
             model=self.model,
-            messages=[{"role": "system", "content": system}] + messages,
-            tools=self._to_litellm_tools(tools),
+            messages=[{"role": "system", "content": system}] + self._to_litellm_messages(messages),
+            tools=self._to_litellm_tools(tools) if tools else None,
             stream=True,
         )
         tc_accum = {}
@@ -68,6 +68,54 @@ class Provider:
                 if b["type"] == "tool_use"
             ],
         )
+
+    def _to_litellm_messages(self, messages):
+        """Translate internal (Anthropic-style) messages to OpenAI format for LiteLLM."""
+        out = []
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+
+            if role == "user" and isinstance(content, str):
+                out.append({"role": "user", "content": content})
+
+            elif role == "user" and isinstance(content, list):
+                # Tool results: each becomes a separate {"role": "tool"} message
+                for block in content:
+                    if block.get("type") == "tool_result":
+                        out.append({
+                            "role": "tool",
+                            "tool_call_id": block["tool_use_id"],
+                            "content": str(block.get("content", "")),
+                        })
+                    else:
+                        out.append({"role": "user", "content": str(block)})
+
+            elif role == "assistant" and isinstance(content, list):
+                # Assistant with content blocks → rebuild OpenAI format
+                text_parts = []
+                tool_calls = []
+                for block in content:
+                    if block.get("type") == "text":
+                        text_parts.append(block["text"])
+                    elif block.get("type") == "tool_use":
+                        tool_calls.append({
+                            "id": block["id"],
+                            "type": "function",
+                            "function": {
+                                "name": block["name"],
+                                "arguments": json.dumps(block["input"]),
+                            },
+                        })
+                assistant_msg = {"role": "assistant"}
+                assistant_msg["content"] = "\n".join(text_parts) if text_parts else None
+                if tool_calls:
+                    assistant_msg["tool_calls"] = tool_calls
+                out.append(assistant_msg)
+
+            else:
+                out.append(msg)
+        return out
 
     def _to_litellm_tools(self, tools):
         return [

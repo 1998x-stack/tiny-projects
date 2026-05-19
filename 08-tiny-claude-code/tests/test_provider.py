@@ -54,6 +54,40 @@ def test_normalize_mixed_response():
     assert result.content[1]["type"] == "tool_use"
 
 
+def test_to_litellm_messages_text():
+    from provider import Provider
+    p = Provider.__new__(Provider)
+    msgs = [
+        {"role": "user", "content": "hello"},
+        {"role": "assistant", "content": [{"type": "text", "text": "hi"}]},
+    ]
+    result = p._to_litellm_messages(msgs)
+    assert result[0] == {"role": "user", "content": "hello"}
+    assert result[1]["role"] == "assistant"
+    assert result[1]["content"] == "hi"
+
+
+def test_to_litellm_messages_tool_cycle():
+    from provider import Provider
+    p = Provider.__new__(Provider)
+    msgs = [
+        {"role": "user", "content": "read foo"},
+        {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "c1", "name": "read", "input": {"file_path": "foo.py"}},
+        ]},
+        {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "c1", "content": "file contents here"},
+        ]},
+    ]
+    result = p._to_litellm_messages(msgs)
+    assert result[0] == {"role": "user", "content": "read foo"}
+    assert result[1]["role"] == "assistant"
+    assert result[1]["tool_calls"][0]["function"]["name"] == "read"
+    assert result[2]["role"] == "tool"
+    assert result[2]["tool_call_id"] == "c1"
+    assert result[2]["content"] == "file contents here"
+
+
 def test_to_litellm_tools():
     from provider import Provider
     p = Provider.__new__(Provider)
