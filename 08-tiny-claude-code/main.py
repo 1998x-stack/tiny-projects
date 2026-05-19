@@ -16,6 +16,7 @@ from tools.todo import TodoTool
 from prompt import build_system_prompt
 from context import ContextManager
 from permissions import PermissionChecker
+from session import SessionManager
 from render import console, render_chunk, render_end
 
 
@@ -26,6 +27,67 @@ def build_tool_registry(permission_checker=None):
                  GrepTool(), GlobTool(), todo_tool]:
         registry.register(tool)
     return registry, todo_tool
+
+
+def handle_slash_command(cmd, agent, todo_tool, session_mgr, context_mgr, provider):
+    parts = cmd.strip().split(maxsplit=1)
+    command = parts[0].lower()
+    arg = parts[1] if len(parts) > 1 else None
+
+    if command == "/help":
+        console.print("""[bold]Commands:[/]
+  /help            Show this help
+  /compact         Force context compression
+  /save [name]     Save session
+  /resume [name]   Load a saved session
+  /sessions        List saved sessions
+  /model [name]    Switch model
+  /todo            Show current tasks
+  /clear           Clear conversation
+  /exit            Quit""")
+    elif command == "/compact":
+        context_mgr.maybe_compact(agent.messages)
+        console.print("[dim]Context compacted.[/]")
+    elif command == "/save":
+        name = arg or "default"
+        session_mgr.save(name, agent.messages, todo_tool.todos)
+        console.print(f"[dim]Session saved: {name}[/]")
+    elif command == "/resume":
+        if not arg:
+            console.print("[red]Usage: /resume <name>[/]")
+            return
+        try:
+            msgs, todos = session_mgr.resume(arg)
+            agent.messages = msgs
+            todo_tool.todos = todos
+            console.print(f"[dim]Session resumed: {arg} ({len(msgs)} messages)[/]")
+        except FileNotFoundError as e:
+            console.print(f"[red]{e}[/]")
+    elif command == "/sessions":
+        sessions = session_mgr.list_sessions()
+        if sessions:
+            for s in sessions:
+                console.print(f"  {s}")
+        else:
+            console.print("[dim]No saved sessions.[/]")
+    elif command == "/model":
+        if not arg:
+            console.print(f"[dim]Current model: {provider.model}[/]")
+        else:
+            provider.model = arg
+            console.print(f"[dim]Model switched to: {arg}[/]")
+    elif command == "/todo":
+        if todo_tool.todos:
+            console.print(todo_tool._format())
+        else:
+            console.print("[dim]No tasks.[/]")
+    elif command == "/clear":
+        agent.messages.clear()
+        console.print("[dim]Conversation cleared.[/]")
+    elif command == "/exit":
+        raise SystemExit(0)
+    else:
+        console.print(f"[red]Unknown command: {command}. Type /help for commands.[/]")
 
 
 def main():
@@ -39,15 +101,16 @@ def main():
         ).strip().lower() in ("y", "yes"),
     )
     tools, todo_tool = build_tool_registry(permission_checker=permissions)
+    context_mgr = ContextManager(provider, max_tokens=config.max_tokens)
+    session_mgr = SessionManager()
 
     def system_prompt():
         return build_system_prompt(cwd=cwd, todos=todo_tool.todos)
 
-    context_mgr = ContextManager(provider, max_tokens=config.max_tokens)
     agent = Agent(provider, tools, system_prompt, pre_call=context_mgr.maybe_compact)
     session = PromptSession(history=FileHistory(".tiny-claude-history"))
 
-    console.print("[bold]Tiny Claude Code[/bold] — Ctrl+D to exit\n")
+    console.print("[bold]Tiny Claude Code[/bold] — /help for commands, Ctrl+D to exit\n")
 
     while True:
         try:
@@ -56,6 +119,9 @@ def main():
             console.print("\n[dim]Bye![/]")
             break
         if not user_input:
+            continue
+        if user_input.startswith("/"):
+            handle_slash_command(user_input, agent, todo_tool, session_mgr, context_mgr, provider)
             continue
         agent.messages.append({"role": "user", "content": user_input})
         for chunk in agent.run_stream():
