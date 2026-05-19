@@ -13,6 +13,7 @@ from tools.bash import BashTool
 from tools.search import GrepTool, GlobTool
 from tools.todo import TodoTool
 from prompt import build_system_prompt
+from context import ContextManager
 from render import console, render_chunk, render_end
 
 
@@ -34,7 +35,8 @@ def main():
     def system_prompt():
         return build_system_prompt(cwd=cwd, todos=todo_tool.todos)
 
-    agent = Agent(provider, tools, system_prompt)
+    context_mgr = ContextManager(provider, max_tokens=config.max_tokens)
+    agent = Agent(provider, tools, system_prompt, pre_call=context_mgr.maybe_compact)
     session = PromptSession(history=FileHistory(".tiny-claude-history"))
 
     console.print("[bold]Tiny Claude Code[/bold] — Ctrl+D to exit\n")
