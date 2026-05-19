@@ -1,0 +1,25 @@
+tools:
+  read:
+    default: allow
+  write:
+    default: ask
+    deny_paths: ["/etc/", "/usr/", "/bin/"]
+  edit:
+    default: ask
+    deny_paths: ["/etc/", "/usr/", "/bin/"]
+  bash:
+    default: ask
+    deny_patterns:
+      - "rm -rf"
+      - "sudo"
+      - "chmod 777"
+      - "> /dev/"
+      - "curl.*\\|.*sh"
+  grep:
+    default: allow
+  glob:
+    default: allow
+  todo_write:
+    default: allow
+  subagent:
+    default: allow

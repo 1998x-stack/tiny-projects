@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -14,6 +15,7 @@ from tools.search import GrepTool, GlobTool
 from tools.todo import TodoTool
 from prompt import build_system_prompt
 from context import ContextManager
+from permissions import PermissionChecker
 from render import console, render_chunk, render_end
 
 
@@ -30,7 +32,13 @@ def main():
     cwd = os.getcwd()
     config = load_config()
     provider = Provider(config.model)
-    tools, todo_tool = build_tool_registry()
+    permissions = PermissionChecker(
+        cwd=cwd,
+        prompt_fn=lambda tool, args: console.input(
+            f"[yellow]Allow {tool}({json.dumps(args)[:80]})?[/] [y/N] "
+        ).strip().lower() in ("y", "yes"),
+    )
+    tools, todo_tool = build_tool_registry(permission_checker=permissions)
 
     def system_prompt():
         return build_system_prompt(cwd=cwd, todos=todo_tool.todos)
