@@ -51,8 +51,6 @@ src/
 │   ├── shape.h          # Base CollisionShape + support function interface
 │   ├── sphere.h         # Sphere: center + radius
 │   ├── box.h            # OBB: center + 3 axes + half-extents
-│   ├── capsule.h        # Capsule: segment + radius
-│   ├── convex_hull.h    # Convex hull: vertex list
 │   └── plane.h          # Infinite plane: normal + offset (static only)
 ├── constraints/
 │   ├── solver.h         # Sequential impulse constraint solver
@@ -161,9 +159,9 @@ struct SimulationParams {
     float physics_dt = 1.0f / 240.0f;
     int max_substeps = 8;
 
-    // Constraint solver
-    int solver_iterations = 10;
-    float baumgarte = 0.2f;         // position correction rate
+    // Constraint solver (cold-start — no warm-starting)
+    int solver_iterations = 15;      // higher to compensate for no warm-start
+    float baumgarte = 0.15f;         // conservative to avoid oscillation
     float penetration_slop = 0.005f; // ignore tiny overlaps
 
     // Sleep
@@ -279,8 +277,8 @@ struct RigidBody {
     vec3 force_accum;
     vec3 torque_accum;
 
-    // Collision shape (owned, polymorphic)
-    CollisionShape* shape;
+    // Collision shape (owned)
+    std::unique_ptr<CollisionShape> shape;
 
     // Sleep state
     bool is_sleeping = false;
@@ -307,8 +305,10 @@ function integrate(body, dt):
     body.linear_velocity += acceleration * dt
     body.position += body.linear_velocity * dt
 
-    // Angular (body-space angular velocity ω)
-    angular_accel = body.inv_inertia_tensor * (body.torque_accum - cross(ω, I·ω))
+    // Angular (body-space ω; torque must be transformed to body frame)
+    torque_body = rotate(conjugate(body.orientation), body.torque_accum)
+    gyro = cross(body.angular_velocity, body.inertia_tensor * body.angular_velocity)
+    angular_accel = body.inv_inertia_tensor * (torque_body - gyro)
     body.angular_velocity += angular_accel * dt
 
     // Orientation update
@@ -429,9 +429,9 @@ function EPA(shape_a, shape_b, simplex):
 |-------|--------------------------------|
 | Sphere | `center + radius * normalize(direction)` |
 | Box (OBB) | `center + Σ sign(dot(axis_i, dir)) * axis_i * half_extent_i` |
-| Capsule | `closest_point_on_segment + radius * normalize(dir)` |
-| Convex Hull | `vertex with max dot(dir, v)` (brute force, OK for < 100 verts) |
 | Plane | Not used with GJK; handled separately as static contact |
+
+> **Note:** EPA uses a simplified implementation without edge tracking (see ADR 0002). Works correctly for sphere-sphere, sphere-box, and axis-aligned box-box. Edge-edge contacts may produce approximate depth.
 
 ---
 
@@ -451,7 +451,9 @@ function build_manifold(shape_a, shape_b, overlap):
     //    tangent1, tangent2 = orthonormal basis perpendicular to normal
 ```
 
-**Contact persistence:** Match contacts across frames by feature ID. Warm-start solver with previous frame's accumulated impulses.
+> **Implementation note:** Initial version uses a single contact point at the body centers offset by penetration depth. Proper manifold generation (Sutherland-Hodgman clipping, ≤ 4 points) is deferred. This is sufficient for sphere-sphere and sphere-plane contacts but limits box-stack rotational stability.
+
+**Solver:** Cold-start (no warm-starting contact persistence). Compensated with higher solver iterations (15 vs typical 10). Contacts are rebuilt each frame with zeroed impulses.
 
 ### 11b. Sequential Impulse Solver
 
@@ -519,6 +521,19 @@ Coulomb friction model with friction cone clamping:
 - **Kinetic friction**: sliding → apply `μ_k * N` opposing sliding direction
 - **Toy simplification**: single `friction` coefficient (= μ_s = μ_k)
 
+### 11d. Post-Solve Velocity Damping
+
+After the solver finishes, clamp very low relative velocity at contacts to zero to prevent micro-jitter:
+
+```cpp
+for (contact in contacts):
+    v_rel = compute_relative_velocity(body_a, body_b, contact.point)
+    if (length(v_rel) < 0.01):
+        apply_impulse(body_a, body_b, -v_rel * 0.5, contact.point)  // brake to rest
+```
+
+This prevents stacked bodies from buzzing at the penetration slop boundary before sleep activates.
+
 ---
 
 ## 12. Supported Collision Shapes
@@ -527,9 +542,9 @@ Coulomb friction model with friction cone clamping:
 |-------|-------------|---------|
 | Sphere | center + radius | Fastest; sphere-sphere is O(1) check |
 | Box (OBB) | center + 3 orthonormal axes + 3 half-extents | General rotated box |
-| Capsule | line segment + radius | Good for character controllers |
-| Convex Hull | list of vertices (≤ 100) | Arbitrary convex shape |
 | Plane | normal + offset | Static ground only (infinite) |
+
+**Future stretch goals:** Capsule (segment + radius), Convex Hull (vertex list).
 
 **Composite shapes** (out of scope for toy engine): A body has exactly one shape. No compound/concave shapes.
 
@@ -565,15 +580,34 @@ void update_sleep(RigidBody& body, float dt, const SimulationParams& params) {
 
 ## 14. Edge Cases & Recovery
 
+Minimal inline guards prevent simulation collapse:
+
+```cpp
+// In integrate(), after velocity update:
+if (std::isnan(body.linear_velocity.x) || std::isnan(body.angular_velocity.x))
+    body.linear_velocity = body.angular_velocity = vec3(0);
+
+// Position bounds check:
+if (length(body.position) > 1000.0f) {
+    body.position = vec3(0, 100, 0);
+    body.linear_velocity = vec3(0);
+
+// In solver, skip bad impulses:
+if (std::isnan(delta_normal) || delta_normal > 1000.0f) continue;
+
+// Quaternion drift: normalize after every integration step (already done)
+// Negative penetration: clamp to 0 (already done in Baumgarte bias)
+```
+
 | Scenario | Handling |
 |----------|----------|
-| **NaN position/velocity** | Skip body for one frame, clamp to last valid state |
-| **Explosion** (bodies fly to infinity) | World bounds clip: if `|position| > 1000`, freeze body |
+| **NaN position/velocity** | Clamp to zero velocity, continue |
+| **Explosion** (bodies fly to infinity) | Freeze body at safe position if `|position| > 1000` |
 | **GJK non-convergence** | Max 32 iterations → return `NO_COLLISION` (missed contact, not crash) |
 | **EPA non-convergence** | Max 32 iterations → use best face found (approximate contact) |
-| **Zero mass dynamic body** | Assert in debug; clamp `inv_mass` to 0 in release |
+| **Zero mass dynamic body** | `inv_mass` clamped to 0; force accumulation skipped |
 | **Quaternion drift** | Normalize after every integration step |
-| **Negative penetration** | Clamp to 0 (separated objects should not be corrected) |
+| **Negative penetration** | Clamp to 0 in Baumgarte bias computation |
 | **NaN in solver** | Skip contact (won't converge, but won't crash) |
 
 ---
