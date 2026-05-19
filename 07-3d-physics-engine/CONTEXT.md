@@ -37,3 +37,4 @@ A toy 3D rigid-body physics engine for learning the fundamentals of real-time si
 ## Flagged Ambiguities
 
 - "Shape" was used to mean both CollisionShape type and specific instances → resolved: CollisionShape is the base class; concrete shapes are SphereShape, BoxShape, etc.
+- Angular velocity storage frame (body vs world) → resolved: `angular_velocity` is stored in body-space (standard convention). Torque and impulses must be transformed to body-space before multiplying by `inv_inertia_tensor`.
