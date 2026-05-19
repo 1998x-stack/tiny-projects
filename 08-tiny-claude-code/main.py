@@ -8,20 +8,29 @@ from tools import ToolRegistry
 from tools.files import ReadTool, WriteTool, EditTool
 from tools.bash import BashTool
 from tools.search import GrepTool, GlobTool
+from tools.todo import TodoTool
+from prompt import build_system_prompt
 
 
 def build_tool_registry(permission_checker=None):
+    todo_tool = TodoTool()
     registry = ToolRegistry(permission_checker=permission_checker)
-    for tool_cls in [ReadTool, WriteTool, EditTool, BashTool, GrepTool, GlobTool]:
-        registry.register(tool_cls())
-    return registry
+    for tool in [ReadTool(), WriteTool(), EditTool(), BashTool(),
+                 GrepTool(), GlobTool(), todo_tool]:
+        registry.register(tool)
+    return registry, todo_tool
 
 
 def main():
+    cwd = os.getcwd()
     config = load_config()
     provider = Provider(config.model)
-    tools = build_tool_registry()
-    agent = Agent(provider, tools, f"You are Tiny Claude Code.\nWorking directory: {os.getcwd()}")
+    tools, todo_tool = build_tool_registry()
+
+    def system_prompt():
+        return build_system_prompt(cwd=cwd, todos=todo_tool.todos)
+
+    agent = Agent(provider, tools, system_prompt)
 
     print("Tiny Claude Code — Ctrl+D to exit\n")
 
